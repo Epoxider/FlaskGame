@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MattyB Stupid Game</title>
+    <style>
+        #loader-container {
+            width: 600px;
+            height: 100px;
+            border: 2px solid black;
+            position: relative;
+            margin: 100px;
+        }
+        #loader {
+            height: 100%;
+            background-color: blue;
+            width: 0%;
+        }
+        #scoreboard {
+            margin: 20px;
+            padding: 20px;
+            border: 1px solid black;
+            display: flex;
+            justify-content: space-around;
+        }
+        .score {
+            font-size: 24px;
+        }
+    </style>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const socket = io.connect(window.location.origin);
+            const loader = document.getElementById('loader');
+            const scoreElements = [
+                document.getElementById('score0'),
+                document.getElementById('score1')
+            ];
+            let loading = false;
+            let currentWidth = 0;
+            const fillSpeed = 0.5;
+
+            socket.on('loading started', function () {
+                loading = true;
+                requestAnimationFrame(updateLoader);
+            });
+
+            socket.on('loading stopped', function () {
+                loading = false;
+                currentWidth = 0;
+                loader.style.width = '0%';
+            });
+
+            socket.on('update scores', function (scores) {
+                scoreElements[0].innerText = scores[0];
+                scoreElements[1].innerText = scores[1];
+            });
+
+            socket.on('scores reset', function (scores) {
+                scoreElements[0].innerText = 0;
+                scoreElements[1].innerText = 0;
+            });
+
+            function startLoading() {
+                socket.emit('start loading');
+            }
+
+            function stopLoading() {
+                socket.emit('stop loading');
+            }
+
+            function givePoint(player) {
+                socket.emit('give point');
+                stopLoading();
+            }
+
+            function resetScores() {
+                socket.emit('reset scores');
+            }
+
+            function updateLoader() {
+                if (loading && currentWidth < 100) {
+                    currentWidth += fillSpeed;
+                    loader.style.width = currentWidth + '%';
+                }
+                if (loading) {
+                    requestAnimationFrame(updateLoader);
+                }
+            }
+
+            document.getElementById('startButton').addEventListener('click', startLoading);
+            document.getElementById('stopButton').addEventListener('click', stopLoading);
+            document.getElementById('interruptButton').addEventListener('click', () => {
+                givePoint(0);  // Adjust index as per your requirement
+            });
+            document.getElementById('resetButton').addEventListener('click', resetScores);
+
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'z') startLoading();
+                else if (event.key === 'x') stopLoading();
+                else if (event.key === 'c') givePoint(0);  // Adjust index
+                else if (event.key === 'v') resetScores();
+            });
+        });
+    </script>
+</head>
+<body>
+    <header>
+        <h1>MattyB Stupid Game</h1>
+    </header>
+    <main>
+        <section id="scoreboard">
+            <div>
+                <label for="score0">Caster:</label>
+                <span class="score" id="score0">0</span>
+            </div>
+            <div>
+                <label for="score1">Kicker:</label>
+                <span class="score" id="score1">0</span>
+            </div>
+        </section>
+        <section id="loader-container">
+            <div id="loader"></div>
+        </section>
+        <button id="startButton">Start Loading (Z)</button>
+        <button id="stopButton">Stop Loading (X)</button>
+        <button id="interruptButton">Interrupt Loading (C)</button>
+        <button id="resetButton">Reset Scoreboard (V)</button>
+    </main>
+</body>
+</html>
